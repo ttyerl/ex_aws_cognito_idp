@@ -19,9 +19,9 @@ defmodule ExAws.CognitoIdp.MixProject do
 
   defp deps do
     [
-      {:ex_aws, "~> 2.0", github: "ex-aws/ex_aws"},
+      {:ex_aws, "~> 2.1"},
       {:hackney, "~> 1.9", only: [:dev, :test]},
-      {:poison, ">= 1.2.0", only: [:dev, :test]},
+      {:poison, ">= 1.2.0", only: [:dev, :test]}
     ]
   end
 end

@@ -8,7 +8,9 @@ defmodule ExAws.CognitoIdp do
   @namespace "AWSCognitoIdentityProviderService"
 
   @type user_pool_id :: String.t()
+  @type client_id :: String.t()
   @type username :: String.t()
+  @type password :: String.t()
   @type op :: ExAws.Operation.JSON.t()
   @type attribute :: %{name: String.t(), value: String.t()}
 
@@ -371,11 +373,52 @@ defmodule ExAws.CognitoIdp do
   end
 
   # TODO: list_users_in_group
-  # TODO: resend_confirmation_code
+
+  @doc """
+  Resends  the  confirmation (for confirmation of registration) to a specific user in the user pool.
+  """
+  @spec resend_confirmation_code(user_pool_id, client_id, username) :: op
+  def resend_confirmation_code(user_pool_id, client_id, username) do
+    data =
+      %{}
+      |> Enum.into(%{client_id: client_id})
+      |> Enum.into(%{username: username})
+      |> camelize_keys()
+
+    request("ResendConfirmationCode", data)
+  end
+
   # TODO: respond_to_auth_challenge
   # TODO: set_ui_customization
   # TODO: set_user_settings
-  # TODO: sign_up
+
+  @type sign_up_opts :: [
+          user_attributes: [%{name: String.t(), value: String.t()}]
+        ]
+
+  @doc """
+  Registers  the user in the specified user pool and creates a user name, password, and user attributes.
+  """
+  @spec sign_up(user_pool_id, client_id, username, password, sign_up_opts) :: op
+  def sign_up(user_pool_id, client_id, username, password, opts \\ []) do
+    user_attributes =
+      opts[:user_attributes]
+      |> Enum.map(fn a -> a |> camelize_keys() end)
+
+    data =
+      opts
+      |> Enum.into(%{user_pool_id: user_pool_id})
+      |> Enum.into(%{client_id: client_id})
+      |> Enum.into(%{username: username})
+      |> Enum.into(%{password: password})
+      |> Map.replace(:user_attributes, user_attributes)
+      |> camelize_keys()
+
+    IO.inspect(data)
+
+    request("SignUp", data)
+  end
+
   # TODO: start_user_import_job
   # TODO: stop_user_import_job
   # TODO: update_device_status
