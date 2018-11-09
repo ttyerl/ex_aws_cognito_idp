@@ -304,7 +304,22 @@ defmodule ExAws.CognitoIdp do
   # TODO: change_password
   # TODO: confirm_device
   # TODO: confirm_forgot_password
-  # TODO: confirm_sign_up
+
+  @doc """
+  Confirms registration of a user.
+  """
+  @spec confirm_sign_up(user_pool_id, client_id, username, confirmation_code :: String.t()) :: op
+  def confirm_sign_up(user_pool_id, client_id, username, confirmation_code) do
+    data = %{
+      "UserPoolId" => user_pool_id,
+      "ClientId" => client_id,
+      "Username" => username,
+      "ConfirmationCode" => confirmation_code
+    }
+
+    request("ConfirmSignUp", data)
+  end
+
   # TODO: create_group
   # TODO: create_identity_provider
   # TODO: create_resource_server
