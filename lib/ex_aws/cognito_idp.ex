@@ -3,7 +3,7 @@ defmodule ExAws.CognitoIdp do
   AWS Cognito Identity Provider
   """
 
-  import ExAws.Utils, only: [camelize_keys: 1, camelize_keys: 2]
+  import ExAws.Utils, only: [camelize_keys: 1, camelize_keys: 2, upcase: 1]
 
   @namespace "AWSCognitoIdentityProviderService"
 
@@ -13,6 +13,16 @@ defmodule ExAws.CognitoIdp do
   @type password :: String.t()
   @type op :: ExAws.Operation.JSON.t()
   @type attribute :: %{name: String.t(), value: String.t()}
+  @type list_users_opts :: [
+          attributes_to_get: [String.t()],
+          filter: String.t(),
+          limit: 0..60
+        ]
+  @type access_token :: String.t()
+  @type auth_flow :: :user_srp_auth | :refresh_token_auth | :refresh_token | :custom_auth | :user_password_auth
+  @type auth_params :: Map.t()
+  @type client_meta_data :: Map.t()
+  @type user_context_data :: %{encoded_data: String.t()}
 
   @doc """
   Adds additional user attributes to the user pool schema.
@@ -356,21 +366,50 @@ defmodule ExAws.CognitoIdp do
   # TODO: get_group
   # TODO: get_identity_provider_by_identifier
   # TODO: get_ui_customization
-  # TODO: get_user
+
+  @spec get_user(access_token) :: op
+  def get_user(access_token) do
+    data = %{"AccessToken" => access_token}
+
+    request("GetUser", data)
+  end
+
   # TODO: get_user_attribute_verification_code
-  # TODO: global_sign_out
-  # TODO: initiate_auth
+
+  @spec global_sign_out(access_token) :: op
+  def global_sign_out(access_token) do
+    data = %{"AccessToken" => access_token}
+
+    request("GlobalSignOut", data)
+  end
+
+  @doc """
+    auth_flow : :user_srp_auth | :refresh_token_auth | :refresh_token | :custom_auth | :user_password_auth
+
+    config = ExAws.Config.new(:cognito_idp)
+    ExAws.CognitoIdp.initiate_auth("client-id", :user_password_auth, %{username: "login-name",
+                                   password: "login-password"}) |> ExAws.request(config)
+  """
+  @spec initiate_auth(client_id, auth_flow, auth_params, client_meta_data, user_context_data) :: op
+  def initiate_auth(client_id, auth_flow, auth_params, client_meta_data \\ %{}, user_context_data \\ %{})
+      when is_map(auth_params) and auth_flow != :admin_no_srp_auth do
+    data =
+      []
+      |> Enum.into(%{client_id: client_id})
+      |> Enum.into(%{auth_flow: upcase(auth_flow)})
+      |> Enum.into(%{auth_parameters: auth_params |> Enum.map(fn {key,val} -> {ExAws.Utils.upcase(key), val} end) |> Enum.into(%{})})
+      |> Enum.into(%{client_meta_data: client_meta_data})
+      |> Map.replace(:user_context_data, user_context_data)
+      |> camelize_keys()
+
+    request("InitiateAuth", data)
+  end
+
   # TODO: list_devices
   # TODO: list_groups
   # TODO: list_identity_providers
   # TODO: list_user_import_jobs
   # TODO: list_user_pool_clients
-
-  @type list_users_opts :: [
-          attributes_to_get: [String.t()],
-          filter: String.t(),
-          limit: 0..60
-        ]
 
   @doc """
   Lists the users in the Amazon Cognito user pool.
@@ -384,6 +423,7 @@ defmodule ExAws.CognitoIdp do
       |> Enum.into(%{user_pool_id: user_pool_id})
       |> camelize_keys()
 
+    IO.puts("list_users data=#{inspect(data)}")
     stream("ListUsers", "Users", data)
   end
 
@@ -403,7 +443,32 @@ defmodule ExAws.CognitoIdp do
     request("ResendConfirmationCode", data)
   end
 
-  # TODO: respond_to_auth_challenge
+  @doc """
+
+  r = ExAws.CognitoIdp.respond_to_auth_challenge(:new_password_required, "client-id", response["Session"],
+                                                 %{new_password: "new-password", username: "uname"},
+                                                 %{"userAttributes.name": "Thomas",
+                                                   "userAttributes.middle_name": "Ace",
+                                                   "userAttributes.family_name": "Thumb",
+                                                   "userAttributes.given_name": "Tom"})
+  r |> ExAws.request(config)
+  """
+  def respond_to_auth_challenge(challenge_name, client_id, session, challenge_responses, other)  when challenge_name != :admin_no_srp_auth do
+    common_challenge_responses = challenge_responses
+                                 |> Enum.map(fn {key,val} -> {ExAws.Utils.upcase(key), val} end)
+                                 |> Enum.into(%{})
+                                 |>  Map.merge(other)
+    data =
+      []
+      |> Enum.into(%{client_id: client_id})
+      |> Enum.into(%{challenge_name: upcase(challenge_name)})
+      |> Enum.into(%{session: session})
+      |> Enum.into(%{challenge_responses: common_challenge_responses})
+      |> camelize_keys()
+
+    request("RespondToAuthChallenge", data)
+  end
+
   # TODO: set_ui_customization
   # TODO: set_user_settings
 
